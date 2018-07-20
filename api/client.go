@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -34,7 +33,7 @@ func (api *RestApi) ListFolder(folderId string) ([]FolderEntry, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New(fmt.Sprintf("unexpected response %d", resp.StatusCode))
+		return nil, fmt.Errorf("unexpected response %d", resp.StatusCode)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -58,7 +57,7 @@ func (api *RestApi) UnlockSecret(secretId int) (string, error) {
 	}
 
 	if record.RecordType.Name != RecordTypeSecret {
-		return "", errors.New("wanted Certificate but got " + record.RecordType.Name)
+		return "", fmt.Errorf("wanted Secret but got %s", record.RecordType.Name)
 	}
 
 	// So the secret is actually in a JSON document embedded in the first JSON document. Cue Inception theme...
@@ -76,7 +75,7 @@ func (api *RestApi) UnlockCertificate(certificateId int) (string, error) {
 	}
 
 	if record.RecordType.Name != RecordTypeCertificate {
-		return "", errors.New("wanted Certificate but got " + record.RecordType.Name)
+		return "", fmt.Errorf("wanted Certificate but got %s", record.RecordType.Name)
 	}
 
 	// cue Inception theme: the certificate is a base64 encoded value in a JSON value, embedded in an outer JSON document
@@ -85,7 +84,7 @@ func (api *RestApi) UnlockCertificate(certificateId int) (string, error) {
 
 	encodedData := cert.Cert.Data
 	if !strings.HasPrefix(encodedData, "data:;base64,") {
-		return "", errors.New("expecting base64 encoded certificate data, got: " + strings.Split(encodedData, ",")[0])
+		return "", fmt.Errorf("expecting base64 encoded certificate data, got: %s", strings.Split(encodedData, ",")[0])
 	}
 
 	certData, err := base64.StdEncoding.DecodeString(strings.Split(encodedData, ",")[1])
@@ -108,7 +107,7 @@ func (api *RestApi) unlockRecord(id int) (*Record, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New(fmt.Sprintf("unexpected response %d", resp.StatusCode))
+		return nil, fmt.Errorf("unexpected response %d", resp.StatusCode)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)

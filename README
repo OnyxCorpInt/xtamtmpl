@@ -1,0 +1,59 @@
+# xtamtmpl
+
+XTAM Template, or `xtamtmpl`, is a shell script that parameterizes configuration files with records from [Xton Access Manager (XTAM)](https://www.xtontech.com/).
+
+## Usage
+
+Configuration values may be supplied to `xtamtmpl` by a combination (in order of precedence) of flags, environment variables and configuration files. These values can be listed with the `--help` flag:
+
+	$ ./xtamtmpl --help
+	Usage of ./xtamtmpl:
+	  -config="": path to config file
+	  -output-path="/etc/config": Directory to which filled templates will be written
+	  -template-path="/mnt/templates": Directory from which to read templates
+	  -xtam-cas-host="": XTAM CAS URL (required)
+	  -xtam-folder-id="": XTAM folder ID (required)
+	  -xtam-host="": XTAM Base URL (required)
+	  -xtam-password="": XTAM authentication string (required)
+	  -xtam-username="": XTAM authentication string (required)
+
+	  
+Some defaults are provided that may be useful for containerized environments.
+
+### Configuration
+
+Flag | Usage
+--- | ---
+Template Path | Directory from which templates will be read. Only files ending in `.template` will be used, and the extension will be dropped to determine the output filename. e.g. `templates/cts.json.template` will become `output/cts.json` 
+Output Path | Directory to which filled templates will be written. Any existing templates matching filenames from the input directory will be overwritten, and non-matching files will be left alone.
+XTAM Host | The base URL for the XTAM server. **Do** include the protocol and path XTAM is deployed to, e.g. `https://my.domain.name/xtam`, but omit elements of the path specific to the REST API, e.g. `/rest`.
+XTAM Folder ID | The ID of the folder from which secrets and certificates will be read. The authenticating user must be permission to read this folder.
+CAS Host | The base URL for the CAS authentication server. Do not include the trailing `/login`.
+XTAM Username | A CAS user authorized to use the provided XTAM server.
+XTAM Password | Password of the authenticating user.
+
+### Example Invocation
+
+Configuration from multiple sources can be combined as per the rules laid out by [the namsral/flag package](https://github.com/namsral/flag):
+
+	$ cat sample.config
+	template-path /mnt/templates
+	output-path /etc/config/myapp
+	
+	$ XTAM_USERNAME=doug XTAM_PASSWORD=redacted ./xtamtmpl -xtam-folder-id=180 -config sample.config
+
+### With Kubernetes
+
+TODO
+
+## Building
+
+Run `make` in the project root directory to produce an `xtamtmpl` executable.
+
+Run `make image` to build a Docker image, tagged with the version found in `./VERSION`.
+
+## Limitations
+
+* Right now all secrets and certificates must come from a single XTAM folder.
+* Authentication can only be performed with [CAS](https://apereo.github.io/cas/5.0.x/installation/Service-Management.html), and the authenticating user must have permission to use XTAM and read the folder containing secrets.
+* All templates are read from a single directory, and written to a single target directory.
