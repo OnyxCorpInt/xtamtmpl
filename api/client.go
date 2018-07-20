@@ -1,12 +1,17 @@
 package api
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 )
+
+const RecordTypeSecret = "Secret"
+const RecordTypeCertificate = "Certificate"
 
 type RestApi struct {
 	URL           string
@@ -46,7 +51,105 @@ func (api *RestApi) ListFolder(folderId string) ([]FolderEntry, error) {
 	return entries, nil
 }
 
+func (api *RestApi) UnlockSecret(secretId int) (string, error) {
+	record, err := api.unlockRecord(secretId)
+	if err != nil {
+		return "", err
+	}
+
+	if record.RecordType.Name != RecordTypeSecret {
+		return "", errors.New("wanted Certificate but got " + record.RecordType.Name)
+	}
+
+	// So the secret is actually in a JSON document embedded in the first JSON document. Cue Inception theme...
+	var secret Secret
+	json.Unmarshal([]byte(record.Custom), &secret)
+
+	return secret.Value, nil
+}
+
+// returns a PEM-encoded certificate, including, where applicable, the key, and one or more certificates in a chain
+func (api *RestApi) UnlockCertificate(certificateId int) (string, error) {
+	record, err := api.unlockRecord(certificateId)
+	if err != nil {
+		return "", err
+	}
+
+	if record.RecordType.Name != RecordTypeCertificate {
+		return "", errors.New("wanted Certificate but got " + record.RecordType.Name)
+	}
+
+	// cue Inception theme: the certificate is a base64 encoded value in a JSON value, embedded in an outer JSON document
+	var cert Cert
+	json.Unmarshal([]byte(record.Custom), &cert)
+
+	encodedData := cert.Cert.Data
+	if !strings.HasPrefix(encodedData, "data:;base64,") {
+		return "", errors.New("expecting base64 encoded certificate data, got: " + strings.Split(encodedData, ",")[0])
+	}
+
+	certData, err := base64.StdEncoding.DecodeString(strings.Split(encodedData, ",")[1])
+	if err != nil {
+		return "", err
+	}
+
+	return string(certData), nil
+}
+
+func (api *RestApi) unlockRecord(id int) (*Record, error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/rest/record/unlock/%d", api.URL, id), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := api.Authenticator.do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(fmt.Sprintf("unexpected response %d", resp.StatusCode))
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var record Record
+	if err = json.Unmarshal(body, &record); err != nil {
+		return nil, err
+	}
+
+	return &record, nil
+}
+
+type Record struct {
+	Custom     string     `json:"custom"`
+	RecordType RecordType `json:"recordType"`
+}
+
+type Secret struct {
+	Value string `json:"Secret"`
+}
+
+type Cert struct {
+	Cert struct {
+		Data string `json:"Data"`
+	} `json:"Cert"`
+}
+
+type PemFile struct {
+	Data     string
+	Filename string
+}
+
 type FolderEntry struct {
+	Name       string     `json:"name"`
+	Id         int        `json:"id"`
+	RecordType RecordType `json:"recordType"`
+}
+
+type RecordType struct {
 	Name string `json:"name"`
-	Id   int    `json:"id"`
 }
