@@ -38,9 +38,9 @@ func (cas *CasAuth) do(req *http.Request) (*http.Response, error) {
 			return nil, err
 		}
 
-		// now that we've authenticated auth.client, we can complete the original request
 	}
 
+	// now that we've authenticated auth.client, we can complete the original request
 	return cas.client.Do(req)
 }
 
@@ -48,6 +48,10 @@ func (cas *CasAuth) authenticate() error {
 	tgtResp, err := cas.client.PostForm(cas.CasURL+"/v1/tickets", url.Values{"username": []string{cas.User}, "password": []string{cas.Password}})
 	if err != nil {
 		return err
+	}
+
+	if tgtResp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("unexpected status code while obaining TGT: %d", tgtResp.StatusCode)
 	}
 
 	tgtLocation := tgtResp.Header.Get("Location")
@@ -58,6 +62,10 @@ func (cas *CasAuth) authenticate() error {
 	stResp, err := cas.client.PostForm(tgtLocation, url.Values{"service": []string{cas.BaseURL + "/"}})
 	if err != nil {
 		return err
+	}
+
+	if stResp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code while service ticket: %d", stResp.StatusCode)
 	}
 
 	bodyBytes, err := ioutil.ReadAll(stResp.Body)
