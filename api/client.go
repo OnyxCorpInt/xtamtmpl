@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strings"
 )
 
@@ -83,11 +84,14 @@ func (api *RestApi) UnlockCertificate(certificateId int) (string, error) {
 	json.Unmarshal([]byte(record.Custom), &cert)
 
 	encodedData := cert.Cert.Data
-	if !strings.HasPrefix(encodedData, "data:;base64,") {
+	// identifies base64 encoded data with any content type (type could be nothing, or application/x-x509-ca-cert, or possibly others)
+	base64regexp := regexp.MustCompile("^data:[^;]*;base64,")
+	matchLoc := base64regexp.FindStringIndex(encodedData)
+	if matchLoc == nil {
 		return "", fmt.Errorf("expecting base64 encoded certificate data, got: %s", strings.Split(encodedData, ",")[0])
 	}
 
-	certData, err := base64.StdEncoding.DecodeString(strings.Split(encodedData, ",")[1])
+	certData, err := base64.StdEncoding.DecodeString(encodedData[matchLoc[1]:])
 	if err != nil {
 		return "", err
 	}

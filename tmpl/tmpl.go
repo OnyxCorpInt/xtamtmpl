@@ -1,9 +1,9 @@
 package tmpl
 
 import (
+	"fmt"
 	"strings"
 	"xtamtmpl/api"
-	"fmt"
 )
 
 // TemplateContext: intended to be used as the template object
@@ -70,4 +70,3 @@ func names(records map[string]int) []string {
 	}
 	return names
 }
-
