@@ -30,6 +30,11 @@ func main() {
 
 	fmt.Printf("Auth: %s\nXTAM Folder: %s\nRead from: %s\nWrite to: %s\n", *xtamUsername, *xtamFolderID, *templatePath, *outputPath)
 
+	parsedTmpls := mustParseTemplates(*templatePath)
+	if len(parsedTmpls) == 0 {
+		abortWithCause("no templates found in %s, aborting", *templatePath)
+	}
+
 	xtamClient := &api.RestApi{
 		URL: *xtamURL,
 		Authenticator: &api.CasAuth{
@@ -43,29 +48,39 @@ func main() {
 	tmplCtx, err := tmpl.NewContext(*xtamFolderID, xtamClient)
 	abortOnError("unable to create template context", err)
 
-	tmplFiles, err := ioutil.ReadDir(*templatePath)
+	for _, parsedTmpl := range parsedTmpls {
+		targetPath := path.Join(*outputPath, parsedTmpl.Name())
+
+		outputFile, err := os.OpenFile(targetPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+		abortOnError("cannot open output file for writing", err)
+		println(outputFile.Name())
+
+		err = parsedTmpl.Execute(outputFile, tmplCtx)
+		abortOnError("failed to process template: "+parsedTmpl.Name(), err)
+		outputFile.Close()
+	}
+}
+
+func mustParseTemplates(dir string) []*template.Template {
+	tmplFiles, err := ioutil.ReadDir(dir)
 	abortOnError("cannot read templates", err)
 
+	var templates []*template.Template
 	for _, tmplFile := range tmplFiles {
 		if strings.HasSuffix(tmplFile.Name(), ".template") {
 			targetName := strings.TrimSuffix(tmplFile.Name(), ".template")
-			targetPath := path.Join(*outputPath, targetName)
 
-			tmplContent, err := ioutil.ReadFile(path.Join(*templatePath, tmplFile.Name()))
+			tmplContent, err := ioutil.ReadFile(path.Join(dir, tmplFile.Name()))
 			abortOnError("failed to read template: "+tmplFile.Name(), err)
 
-			parsedTmpl, err := template.New(tmplFile.Name()).Parse(string(tmplContent))
+			parsedTmpl, err := template.New(targetName).Parse(string(tmplContent))
 			abortOnError("failed to parse template "+tmplFile.Name(), err)
 
-			outputFile, err := os.OpenFile(targetPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
-			abortOnError("cannot open output file for writing", err)
-			println(outputFile.Name())
-
-			err = parsedTmpl.Execute(outputFile, tmplCtx)
-			abortOnError("failed to process template: "+tmplFile.Name(), err)
-			outputFile.Close()
+			templates = append(templates, parsedTmpl)
 		}
 	}
+
+	return templates
 }
 
 func requireCliFlags(names ...string) {
