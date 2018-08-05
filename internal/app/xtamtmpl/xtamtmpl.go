@@ -1,4 +1,4 @@
-package main
+package xtamtmpl
 
 import (
 	"fmt"
@@ -8,25 +8,26 @@ import (
 	"path"
 	"strings"
 	"text/template"
-	"xtamtmpl/api"
-	"xtamtmpl/tmpl"
+	"xtamtmpl/pkg/client"
+	"xtamtmpl/internal/pkg/tmpl"
 )
 
-func main() {
-	xtamURL := flag.String("xtam-host", "", "XTAM Base URL (required)")
+// RunCLI parses CLI flags and fills templates. Application will exit on error.
+func RunCLI() {
+	flag.String(flag.DefaultConfigFlagname, "", "path to config file")
+	outputPath := flag.String("output-path", "/etc/config", "Directory to which filled templates will be written")
+	templatePath := flag.String("template-path", "/mnt/templates", "Directory from which to read templates")
 	xtamCASURL := flag.String("xtam-cas-host", "", "XTAM CAS URL (required)")
+	xtamURL := flag.String("xtam-host", "", "XTAM Base URL (required)")
 	xtamUsername := flag.String("xtam-username", "", "XTAM authentication string (required)")
 	xtamPassword := flag.String("xtam-password", "", "XTAM authentication string (required)")
 	xtamFolderID := flag.String("xtam-folder-id", "", "XTAM folder ID (required)")
-	templatePath := flag.String("template-path", "/mnt/templates", "Directory from which to read templates")
-	flag.String(flag.DefaultConfigFlagname, "", "path to config file")
-	outputPath := flag.String("output-path", "/etc/config", "Directory to which filled templates will be written")
 
 	flag.Parse()
-	requireCliFlags("xtam-username", "xtam-password", "xtam-folder-id", "xtam-host", "xtam-cas-host")
 
-	abortUnlessDirectory(*templatePath)
-	abortUnlessDirectory(*outputPath)
+	requireCliFlags("xtam-username", "xtam-password", "xtam-folder-id", "xtam-host", "xtam-cas-host")
+	requireDir(*templatePath)
+	requireDir(*outputPath)
 
 	fmt.Printf("Auth: %s\nXTAM Folder: %s\nRead from: %s\nWrite to: %s\n", *xtamUsername, *xtamFolderID, *templatePath, *outputPath)
 
@@ -35,11 +36,11 @@ func main() {
 		abortWithCause("no templates found in %s, aborting", *templatePath)
 	}
 
-	xtamClient := &api.RestApi{
+	xtamClient := &client.RestAPI{
 		URL: *xtamURL,
-		Authenticator: &api.CasAuth{
+		Authenticator: &client.CASAuth{
 			BaseURL:  *xtamURL,
-			CasURL:   *xtamCASURL,
+			CASURL:   *xtamCASURL,
 			User:     *xtamUsername,
 			Password: *xtamPassword,
 		},
@@ -94,17 +95,17 @@ func requireCliFlags(names ...string) {
 	}
 }
 
-func abortOnError(reason string, err error) {
-	if err != nil {
-		abortWithCause("Error: %s: %s", reason, err.Error())
-	}
-}
-
-func abortUnlessDirectory(path string) {
+func requireDir(path string) {
 	fi, err := os.Stat(path)
 	abortOnError("cannot read template directory", err)
 	if !fi.IsDir() {
 		abortWithCause("%s must be a directory", fi.Name())
+	}
+}
+
+func abortOnError(reason string, err error) {
+	if err != nil {
+		abortWithCause("Error: %s: %s", reason, err.Error())
 	}
 }
 

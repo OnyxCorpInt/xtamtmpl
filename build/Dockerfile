@@ -14,7 +14,7 @@ RUN go get -u github.com/golang/dep/cmd/dep
 RUN dep ensure
 
 # Build app
-RUN go install
+RUN go install ./cmd/xtamtmpl
 
 # Stage 2: get CA certificates (needed for XTAM)
 FROM debian as ca-certs

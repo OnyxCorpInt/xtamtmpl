@@ -1,4 +1,4 @@
-package api
+package client
 
 import (
 	"errors"
@@ -9,8 +9,9 @@ import (
 	"net/url"
 )
 
-type CasAuth struct {
-	CasURL   string
+// CASAuth obtains a service ticket from CASURL for BaseURL using User and Password as credentials.
+type CASAuth struct {
+	CASURL   string
 	BaseURL  string
 	User     string
 	Password string
@@ -18,7 +19,7 @@ type CasAuth struct {
 	client http.Client
 }
 
-func (cas *CasAuth) do(req *http.Request) (*http.Response, error) {
+func (cas *CASAuth) do(req *http.Request) (*http.Response, error) {
 	baseURL, err := url.Parse(cas.BaseURL)
 	if err != nil {
 		return nil, err
@@ -40,12 +41,12 @@ func (cas *CasAuth) do(req *http.Request) (*http.Response, error) {
 
 	}
 
-	// now that we've authenticated auth.client, we can complete the original request
+	// now that we've authenticated cas.client, we can complete the original request
 	return cas.client.Do(req)
 }
 
-func (cas *CasAuth) authenticate() error {
-	tgtResp, err := cas.client.PostForm(cas.CasURL+"/v1/tickets", url.Values{"username": []string{cas.User}, "password": []string{cas.Password}})
+func (cas *CASAuth) authenticate() error {
+	tgtResp, err := cas.client.PostForm(cas.CASURL+"/v1/tickets", url.Values{"username": []string{cas.User}, "password": []string{cas.Password}})
 	if err != nil {
 		return err
 	}
@@ -82,7 +83,7 @@ func (cas *CasAuth) authenticate() error {
 	// calling for side-effect of populating auth.client.Jar
 	cookieResp, err := cas.client.Get(cas.BaseURL + "?ticket=" + url.QueryEscape(serviceTicket))
 	if cookieResp.StatusCode != http.StatusOK {
-		return errors.New(fmt.Sprintf("unexpected response from cookie request: %d", cookieResp.StatusCode))
+		return fmt.Errorf("unexpected response from cookie request: %d", cookieResp.StatusCode)
 	}
 	return err
 }
