@@ -28,9 +28,9 @@ type RequestAuthenticator interface {
 	do(*http.Request) (*http.Response, error)
 }
 
-// ListFolder obtains references (name, id, and type) to records in the folder with the given ID.
-func (api *RestAPI) ListFolder(folderID string) ([]FolderEntry, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/rest/folder/list/%s", api.URL, folderID), nil)
+// ListContainer obtains references (name, id, and type) to records in the folder or Vault with the given ID.
+func (api *RestAPI) ListContainer(containerID string) ([]ContainerEntry, error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/rest/folder/list/%s", api.URL, containerID), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (api *RestAPI) ListFolder(folderID string) ([]FolderEntry, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected response %d", resp.StatusCode)
+		return nil, fmt.Errorf("unexpected response listing container %d", resp.StatusCode)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -49,7 +49,7 @@ func (api *RestAPI) ListFolder(folderID string) ([]FolderEntry, error) {
 		return nil, err
 	}
 
-	var entries []FolderEntry
+	var entries []ContainerEntry
 
 	if err = json.Unmarshal(body, &entries); err != nil {
 		return nil, err
@@ -136,8 +136,8 @@ func (api *RestAPI) unlockRecord(id int) (*record, error) {
 	return &record, nil
 }
 
-// FolderEntry is a record reference.
-type FolderEntry struct {
+// ContainerEntry is a record reference.
+type ContainerEntry struct {
 	Name       string     `json:"name"`
 	ID         int        `json:"id"`
 	RecordType RecordType `json:"recordType"`

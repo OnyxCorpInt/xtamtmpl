@@ -13,9 +13,9 @@ type TemplateContext struct {
 	certificates map[string]int
 }
 
-// NewContext creates a new template context that will fetch records from the given folder.
-func NewContext(folderID string, xtam *client.RestAPI) (*TemplateContext, error) {
-	entries, err := xtam.ListFolder(folderID)
+// NewContext creates a new template context that will fetch records from the given container.
+func NewContext(containerID string, xtam *client.RestAPI) (*TemplateContext, error) {
+	entries, err := xtam.ListContainer(containerID)
 	if err != nil {
 		return nil, err
 	}

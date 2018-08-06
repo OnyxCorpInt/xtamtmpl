@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
+	"net/http/httputil"
 	"net/url"
 )
 
@@ -52,6 +53,8 @@ func (cas *CASAuth) authenticate() error {
 	}
 
 	if tgtResp.StatusCode != http.StatusCreated {
+		rb, _ := httputil.DumpResponse(tgtResp, true)
+		fmt.Println(string(rb))
 		return fmt.Errorf("unexpected status code while obaining TGT: %d", tgtResp.StatusCode)
 	}
 

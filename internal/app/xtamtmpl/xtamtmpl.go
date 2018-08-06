@@ -8,8 +8,8 @@ import (
 	"path"
 	"strings"
 	"text/template"
-	"xtamtmpl/pkg/client"
 	"xtamtmpl/internal/pkg/tmpl"
+	"xtamtmpl/pkg/client"
 )
 
 // RunCLI parses CLI flags and fills templates. Application will exit on error.
@@ -21,15 +21,15 @@ func RunCLI() {
 	xtamURL := flag.String("xtam-host", "", "XTAM Base URL (required)")
 	xtamUsername := flag.String("xtam-username", "", "XTAM authentication string (required)")
 	xtamPassword := flag.String("xtam-password", "", "XTAM authentication string (required)")
-	xtamFolderID := flag.String("xtam-folder-id", "", "XTAM folder ID (required)")
+	xtamContainerID := flag.String("xtam-container-id", "", "XTAM container ID (required)")
 
 	flag.Parse()
 
-	requireCliFlags("xtam-username", "xtam-password", "xtam-folder-id", "xtam-host", "xtam-cas-host")
+	requireCliFlags("xtam-username", "xtam-password", "xtam-container-id", "xtam-host", "xtam-cas-host")
 	requireDir(*templatePath)
 	requireDir(*outputPath)
 
-	fmt.Printf("Auth: %s\nXTAM Folder: %s\nRead from: %s\nWrite to: %s\n", *xtamUsername, *xtamFolderID, *templatePath, *outputPath)
+	fmt.Printf("Auth: %s\nXTAM Container: %s\nRead from: %s\nWrite to: %s\n", *xtamUsername, *xtamContainerID, *templatePath, *outputPath)
 
 	parsedTmpls := mustParseTemplates(*templatePath)
 	if len(parsedTmpls) == 0 {
@@ -46,7 +46,7 @@ func RunCLI() {
 		},
 	}
 
-	tmplCtx, err := tmpl.NewContext(*xtamFolderID, xtamClient)
+	tmplCtx, err := tmpl.NewContext(*xtamContainerID, xtamClient)
 	abortOnError("unable to create template context", err)
 
 	for _, parsedTmpl := range parsedTmpls {

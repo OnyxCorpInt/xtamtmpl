@@ -12,7 +12,7 @@ Configuration values may be supplied to `xtamtmpl` by a combination (in order of
 	  -output-path="/etc/config": Directory to which filled templates will be written
 	  -template-path="/mnt/templates": Directory from which to read templates
 	  -xtam-cas-host="": XTAM CAS URL (required)
-	  -xtam-folder-id="": XTAM folder ID (required)
+	  -xtam-container-id="": XTAM container (folder or Vault) ID (required)
 	  -xtam-host="": XTAM Base URL (required)
 	  -xtam-password="": XTAM authentication string (required)
 	  -xtam-username="": XTAM authentication string (required)
@@ -27,7 +27,7 @@ Flag | Usage
 Template Path | Directory from which templates will be read. Only files ending in `.template` will be used, and the extension will be dropped to determine the output filename. e.g. `templates/cts.json.template` will become `output/cts.json`. Note that this is not recursive: a flat directory structure is expected.
 Output Path | Directory to which the final configuration files will be written. Any files in this directly whose names clash with written configuration will be overwritten, while non-clashing files will be left alone. So it should be safe to "merge" templated config in with other files.
 XTAM Host | The base URL for the XTAM server. **Do** include the protocol and path XTAM is deployed to, e.g. `https://my.domain.name/xtam`, but omit elements of the path specific to the REST API, e.g. `/rest`.
-XTAM Folder ID | The ID of the folder from which secrets and certificates will be read. The authenticating user must be permitted to read this folder.
+XTAM Container ID | The ID of the folder or Vault from which secrets and certificates will be read. The authenticating user must be permitted to read this container.
 CAS Host | The base URL for the CAS authentication server. Do not include the trailing `/login`.
 XTAM Username | A CAS user authorized to use the provided XTAM server. A service ticket will be obtained from CAS for this user on each invocation.
 XTAM Password | Password of the authenticating user.
@@ -40,7 +40,7 @@ Configuration from multiple sources can be combined as per the rules laid out by
 	template-path /mnt/templates
 	output-path /etc/config/myapp
 	
-	$ XTAM_USERNAME=doug XTAM_PASSWORD=redacted ./xtamtmpl -xtam-folder-id=180 -config sample.config
+	$ XTAM_USERNAME=doug XTAM_PASSWORD=redacted ./xtamtmpl -xtam-container-id=180 -config sample.config
 
 The precedence for flags (lowest to highest) are: default values, config file, environment variables, then CLI flags.
 
@@ -106,7 +106,7 @@ data:
   configfile: <snipped base64 encoded key value pairs>
 ```
 
-It's helpful to put all of the XTAM configuration that will be common to all init containers into a shared Kubernetes `Secret` object. This could include credentials and XTAM server URLs. Depending on how your XTAM records are organized, you can also include the folder ID. An example of the xtamtmpl config file:
+It's helpful to put all of the XTAM configuration that will be common to all init containers into a shared Kubernetes `Secret` object. This could include credentials and XTAM server URLs. Depending on how your XTAM records are organized, you can also include the container ID. An example of the xtamtmpl config file:
 
 ---
 
@@ -115,7 +115,7 @@ xtam-username doug
 xtam-password redacted
 xtam-cas-host https://myorg.com/cas
 xtam-host https://myorg.com/xtam
-xtam-folder-id 12345
+xtam-container-id 12345
 ```
 
 Which would then be base64-encoded and used as the value of `configfile`. There are [other ways to create Secret objects](https://kubernetes.io/docs/concepts/configuration/secret/#creating-your-own-secrets), so take your pick.
@@ -264,7 +264,7 @@ Run `make image` to build a local Docker image, tagged with the version found in
 
 ## Limitations
 
-* Right now all secrets and certificates to read must come from a single XTAM folder per invocation of the tool.
-* Authentication can only be performed with [CAS](https://apereo.github.io/cas/5.0.x/installation/Service-Management.html), and the authenticating user must have permission to use XTAM and read the folder containing secrets.
+* Right now all secrets and certificates to read must come from a single XTAM container per invocation of the tool.
+* Authentication can only be performed with [CAS](https://apereo.github.io/cas/5.0.x/installation/Service-Management.html), and the authenticating user must have permission to read the container.
 * All templates are read from a single directory, and written to a single target directory.
 * No escaping is done (or possible) of values coming from XTAM and inserted into templates.
