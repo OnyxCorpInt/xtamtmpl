@@ -26,8 +26,16 @@ func NewContext(containerID string, xtam *client.RestAPI) (*TemplateContext, err
 		certificates: make(map[string]int),
 	}
 
+	all := make(map[string]string)
 	for _, entry := range entries {
 		lcName := strings.ToLower(entry.Name)
+
+		// abort if more than one record has the same name, as it is likely accidental and could lead to unpredictable builds
+		if recordType, ok := all[lcName]; ok {
+			return nil, fmt.Errorf("Container has repeated record with name %s (first type %s, second type %s)", entry.Name, recordType, entry.RecordType.Name)
+		}
+		all[lcName] = entry.RecordType.Name
+
 		switch entry.RecordType.Name {
 		case client.RecordTypeSecret:
 			ctx.secrets[lcName] = entry.ID
