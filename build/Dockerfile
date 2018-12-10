@@ -1,22 +1,21 @@
 #
 # Stage 1: build go code
-FROM golang as go-builder
+FROM golang:1.11 as go-builder
 
-# Setup main package
-RUN mkdir /go/src/xtamtmpl
-WORKDIR /go/src/xtamtmpl
-
-# Copy over packages
-COPY . .
+# Setup module root
+RUN mkdir -p /src/xtamtmpl
+WORKDIR /src/xtamtmpl
 
 # Install dependencies
-RUN go get -u github.com/golang/dep/cmd/dep
-RUN dep ensure
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
 
 # Build app
+COPY . .
 RUN go install ./cmd/xtamtmpl
 
-# Stage 2: get CA certificates (needed for XTAM)
+# Stage 2: get CA certificates (needed to authenticate XTAM servers with valid certs)
 FROM debian as ca-certs
 RUN apt-get update
 RUN apt-get install -y ca-certificates

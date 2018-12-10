@@ -13,6 +13,6 @@ image:
 	docker build -t xtamtmpl:$(TAG) -f ./build/Dockerfile .
 
 lint:
-	go get golang.org/x/lint/golint
+	go install golang.org/x/lint/golint
 	go vet $(PKGS)
-	${GOPATH}/bin/golint $(PKGS)
+	golint $(PKGS)
