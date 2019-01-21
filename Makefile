@@ -1,5 +1,6 @@
 PKGS := $(shell go list ./... | grep -v -P "vendor")
 TAG?=$(or ${VERSION},$(shell cat VERSION))
+REGISTRY=$(shell cat REGISTRY)
 .PHONY: lint image install xtamtmpl
 
 xtamtmpl:
@@ -11,6 +12,12 @@ install: xtamtmpl
 
 image:
 	docker build -t xtamtmpl:$(TAG) -f ./build/Dockerfile .
+
+tag-registry: image
+	docker tag xtamtmpl:$(TAG) $(REGISTRY)/xtamtmpl:$(TAG)
+
+publish: tag-registry
+	docker push $(REGISTRY)/xtamtmpl:$(TAG)
 
 lint:
 	go install golang.org/x/lint/golint
